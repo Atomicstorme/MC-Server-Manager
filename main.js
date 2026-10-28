@@ -10,6 +10,7 @@ const files = require('./src/files');
 const backups = require('./src/backups');
 const addons = require('./src/addons');
 const software = require('./src/software');
+const tunnel = require('./src/tunnel');
 const { Scheduler } = require('./src/scheduler');
 const { Updater, RELEASES_PAGE_URL } = require('./src/updater');
 
@@ -182,6 +183,9 @@ handle('app:set', (patch) => {
   if ('startWithWindows' in patch) applyLoginItem();
   return res;
 });
+
+handle('tunnel:status', () => tunnel.status());
+handle('tunnel:apply', (patch) => tunnel.apply(patch));
 
 handle('servers:pickFolder', async () => {
   const res = await dialog.showOpenDialog(mainWindow, { title: 'Choose a server folder', properties: ['openDirectory', 'createDirectory'] });

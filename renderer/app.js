@@ -1157,6 +1157,7 @@ views.app = (root) => {
       </div>
       <p class="muted small">Pick which servers start with the manager in each server's Launch settings. Windows starts the manager when you sign in, not before.</p>
     </div>
+    <div class="card" id="tunnel-card"><h2>playit.gg tunnel</h2><p class="muted">Checking…</p></div>
     <div class="card"><h2>About</h2>
       <p class="muted">${esc(state.system.cpu || '')} · ${state.system.cores} cores · ${fmtBytes(state.system.totalMem)} RAM</p>
       <p class="muted small">Free and open source under the <a href="https://github.com/Atomicstorme/MC-Server-Manager/blob/main/LICENSE" target="_blank">GNU GPL v3</a>. <a href="https://github.com/Atomicstorme/MC-Server-Manager" target="_blank">Source code</a>.</p>
@@ -1168,7 +1169,52 @@ views.app = (root) => {
   $('#app-autodl').addEventListener('change', async (e) => { state.app = await call('app:set', { autoDownloadUpdates: e.target.checked }); });
   $('#app-login').addEventListener('change', async (e) => { state.app = await call('app:set', { startWithWindows: e.target.checked }); });
   $('#app-tray').addEventListener('change', async (e) => { state.app = await call('app:set', { minimizeToTray: e.target.checked }); });
+  refreshTunnel();
+  const timer = setInterval(refreshTunnel, 5000);
+  return () => clearInterval(timer);
 };
+
+// The playit.gg service is what makes the servers reachable from outside.
+// Changes go through a Windows administrator prompt (src/tunnel.js).
+let tunnelBusy = false;
+async function refreshTunnel() {
+  if (tunnelBusy) return;
+  const t = await call('tunnel:status').catch(() => null);
+  if (t) renderTunnel(t);
+}
+
+function renderTunnel(t) {
+  const el = $('#tunnel-card');
+  if (!el) return;
+  if (!t.installed) {
+    el.innerHTML = `<h2>playit.gg tunnel</h2><p class="muted">playit.gg isn't installed on this PC. Players outside your network need a tunnel or port forwarding to join.</p>`;
+    return;
+  }
+  const running = t.state === 'RUNNING';
+  const pill = running ? 'running' : t.state.endsWith('PENDING') ? 'starting' : 'crashed';
+  const label = { RUNNING: 'Running', STOPPED: 'Stopped', START_PENDING: 'Starting', STOP_PENDING: 'Stopping' }[t.state] || t.state;
+  el.innerHTML = `<h2>playit.gg tunnel</h2>
+    <div class="row"><span class="pill ${pill}">${esc(label)}</span>
+      ${!running && t.state === 'STOPPED' ? '<span class="muted small">Players outside your network can\'t join while this is stopped.</span>' : ''}
+      <span class="spacer"></span>
+      ${running ? '' : `<button class="btn primary" id="tn-start" ${t.state === 'STOPPED' ? '' : 'disabled'}>Start tunnel</button>`}
+    </div>
+    <div class="props" style="margin-top:12px">
+      <label class="check"><input type="checkbox" id="tn-delayed" ${t.delayedStart ? 'checked' : ''}> Wait for the internet connection before starting after a reboot</label>
+      <label class="check"><input type="checkbox" id="tn-restart" ${t.restartOnFailure ? 'checked' : ''}> Restart the tunnel automatically if it stops (after 1 minute)</label>
+    </div>
+    <p class="muted small">These are Windows service settings, so Windows asks for administrator permission each time you change them.</p>`;
+  const change = async (patch) => {
+    tunnelBusy = true;
+    $$('#tunnel-card input, #tunnel-card button').forEach((x) => { x.disabled = true; });
+    const res = await attempt(() => call('tunnel:apply', patch), 'playit.gg settings updated.');
+    tunnelBusy = false;
+    if (res) renderTunnel(res); else refreshTunnel();
+  };
+  $('#tn-start')?.addEventListener('click', () => change({ start: true }));
+  $('#tn-delayed').addEventListener('change', (e) => change({ delayedStart: e.target.checked }));
+  $('#tn-restart').addEventListener('change', (e) => change({ restartOnFailure: e.target.checked }));
+}
 
 async function installUpdate() {
   const running = state.servers.filter((s) => isRunning(s.id));
@@ -1268,6 +1314,9 @@ api.on('app:quitting', ({ count }) => {
 });
 
 // --- boot --------------------------------------------------------------------------
+
+// Static in index.html (unlike #nav, which renderSidebar rebuilds), so wire it once.
+$('#nav-app').addEventListener('click', () => go('app'));
 
 (async function boot() {
   const st = await call('app:state');
