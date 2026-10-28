@@ -1,0 +1,71 @@
+{
+  "name": "mc-server-manager",
+  "productName": "MC Server Manager",
+  "version": "1.0.7",
+  "description": "Desktop manager for Minecraft servers: start/stop, console, settings, admin tools, backups, monitoring, plugins and mods.",
+  "main": "main.js",
+  "private": true,
+  "author": "Atomicstorme",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Atomicstorme/MC-Server-Manager.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build:runas": "node tools/build-runas.js",
+    "predist": "npm run build:runas",
+    "dist": "electron-builder --win",
+    "prerelease": "npm run build:runas",
+    "release": "electron-builder --win --publish always"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "electron-updater": "^6.8.11",
+    "yauzl": "^3.2.0"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.jai13.mcservermanager",
+    "productName": "MC Server Manager",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "renderer/**/*",
+      "build/icon.png"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "MC-Server-Manager-Setup-${version}.exe",
+      "differentialPackage": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Atomicstorme",
+      "repo": "MC-Server-Manager-releases",
+      "releaseType": "release"
+    },
+    "extraResources": [
+      {
+        "from": "build/bin",
+        "to": "bin",
+        "filter": [
+          "mc-runas.exe"
+        ]
+      }
+    ]
+  }
+}

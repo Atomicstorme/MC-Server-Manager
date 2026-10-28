@@ -1,0 +1,4 @@
+node_modules/
+dist/
+# built from tools/mc-runas by "npm run build:runas"
+build/bin/

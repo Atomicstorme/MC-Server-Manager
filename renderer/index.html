@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'">
+  <title>MC Server Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="layout">
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <span class="brand"><img src="../build/icon.png" alt=""> Server Manager</span>
+      </div>
+      <div id="server-picker"></div>
+      <nav id="nav"></nav>
+      <div class="sidebar-footer">
+        <button class="nav-item" data-view="app" id="nav-app">
+          <span class="nav-icon">⚙</span> App &amp; updates <span id="update-dot" class="dot hidden"></span>
+        </button>
+        <div id="app-version" class="muted small"></div>
+      </div>
+    </aside>
+
+    <main id="main">
+      <div id="update-banner" class="banner hidden"></div>
+      <header id="topbar"></header>
+      <div id="task-bar" class="hidden"><span id="task-label"></span><div class="progress"><div id="task-fill"></div></div></div>
+      <section id="view"></section>
+    </main>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toasts"></div>
+  <script src="charts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
