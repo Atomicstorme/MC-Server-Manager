@@ -1,7 +1,7 @@
 {
   "name": "mc-server-manager",
   "productName": "MC Server Manager",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Desktop manager for Minecraft servers: start/stop, console, settings, admin tools, backups, monitoring, plugins and mods.",
   "main": "main.js",
   "private": true,

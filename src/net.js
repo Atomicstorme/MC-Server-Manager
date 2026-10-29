@@ -26,13 +26,15 @@ function postJson(url, body) {
 }
 
 // Streams url to dest via a .part file, reporting progress and optionally
-// verifying a sha1/sha256 checksum before moving it into place.
+// verifying a sha1/sha256 checksum before moving it into place. The saved
+// file is then read back and hashed again, so a write damaged by a disk or
+// memory fault fails here instead of replacing a working file.
 async function download(url, dest, { onProgress, sha1, sha256 } = {}) {
   const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, redirect: 'follow' });
   if (!res.ok || !res.body) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
   const total = Number(res.headers.get('content-length')) || 0;
-  const algo = sha256 ? 'sha256' : sha1 ? 'sha1' : null;
-  const hash = algo ? crypto.createHash(algo) : null;
+  const algo = sha1 && !sha256 ? 'sha1' : 'sha256';
+  const hash = crypto.createHash(algo);
   let received = 0;
 
   fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -40,18 +42,20 @@ async function download(url, dest, { onProgress, sha1, sha256 } = {}) {
   const body = Readable.fromWeb(res.body);
   body.on('data', (chunk) => {
     received += chunk.length;
-    if (hash) hash.update(chunk);
+    hash.update(chunk);
     if (onProgress) onProgress({ received, total });
   });
   await pipeline(body, fs.createWriteStream(part));
 
-  if (hash) {
-    const digest = hash.digest('hex');
-    const expected = (sha256 || sha1).toLowerCase();
-    if (digest !== expected) {
-      fs.rmSync(part, { force: true });
-      throw new Error(`Checksum mismatch for ${path.basename(dest)}`);
-    }
+  const digest = hash.digest('hex');
+  const expected = sha256 || sha1;
+  if (expected && digest !== expected.toLowerCase()) {
+    fs.rmSync(part, { force: true });
+    throw new Error(`Checksum mismatch for ${path.basename(dest)}`);
+  }
+  if ((await hashFile(part, algo)) !== digest) {
+    fs.rmSync(part, { force: true });
+    throw new Error(`${path.basename(dest)} was damaged while being saved to disk, so it wasn't installed. This points to a memory or drive fault on this PC.`);
   }
   fs.renameSync(part, dest);
   return dest;
